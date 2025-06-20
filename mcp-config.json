@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "benchling-mcp": {
+      "command": "uvx",
+      "args": ["benchling-mcp", "server"],
+      "env": {
+        "BENCHLING_API_KEY": "your_api_key_here",
+        "BENCHLING_DOMAIN": "yourcompany.benchling.com"
+      }
+    }
+  }
+} 

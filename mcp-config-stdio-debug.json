@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "benchling-mcp": {
+      "command": "uv",
+      "args": ["run", "stdio"],
+      "cwd": "/path/to/benchling-mcp",
+      "env": {
+        "BENCHLING_API_KEY": "your_api_key_here",
+        "BENCHLING_DOMAIN": "yourcompany.benchling.com"
+      }
+    }
+  }
+} 
