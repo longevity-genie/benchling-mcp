@@ -126,12 +126,12 @@ class BenchlingMCP(FastMCP):
         
         self.tool(
             name=f"{self.prefix}download_dna_sequence", 
-            description="Download a DNA sequence (including plasmids) as a FASTA file"
+            description="Download a DNA sequence (including plasmids) with automatic format selection"
         )(self.download_dna_sequence)
         
         self.tool(
             name=f"{self.prefix}download_sequence_by_name", 
-            description="Find and download a DNA sequence by name (e.g., plasmid name)"
+            description="Find and download a DNA sequence by name with smart format selection (GenBank for plasmids)"
         )(self.download_sequence_by_name)
         
         self.tool(
@@ -1152,17 +1152,32 @@ class BenchlingMCP(FastMCP):
         format: str = "auto"
     ) -> BenchlingResult:
         """
-        Download a DNA sequence (including plasmids) in FASTA or GenBank format.
+        Download a DNA sequence (including plasmids) with automatic format selection.
+        
+        SMART FORMAT SELECTION:
+        - For plasmids: Automatically uses GenBank format (.gb) to preserve annotations
+        - For other sequences: Uses FASTA format (.fasta) for simplicity
+        - Plasmid detection based on name keywords and sequence characteristics
+        
+        RECOMMENDED USAGE:
+        - Leave format="auto" for best results (default behavior)
+        - Files saved to current directory by default for easy access
         
         Args:
             sequence_id: The ID of the DNA sequence to download
-            download_dir: Directory to save the file (default: current directory)
-            filename: Optional custom filename (default: uses sequence name)
-            format: Format to download ("auto", "fasta", "genbank"). 
-                   "auto" chooses GenBank for plasmids, FASTA for others.
+            download_dir: Directory to save the file (default: "." = current directory)
+            filename: Optional custom filename (default: auto-generated from sequence name)
+            format: Format to download. OPTIONS:
+                   - "auto" (RECOMMENDED): GenBank for plasmids, FASTA for others
+                   - "fasta": Force FASTA format (.fasta extension)  
+                   - "genbank": Force GenBank format (.gb extension)
             
         Returns:
-            BenchlingResult with the path to the downloaded file
+            BenchlingResult with download information including:
+                - file_path: Full path to downloaded file
+                - format: Actual format used ("fasta" or "genbank")
+                - is_plasmid: Whether sequence was detected as plasmid
+                - length: Sequence length in base pairs
         """
         with start_action(action_type="benchling_download_dna_sequence", sequence_id=sequence_id, format=format) as action:
             try:
@@ -1237,13 +1252,19 @@ class BenchlingMCP(FastMCP):
         format: str = "auto"
     ) -> BenchlingResult:
         """
-        Find and download a DNA sequence by name (e.g., plasmid name).
+        Find and download a DNA sequence by name with smart format selection.
+        
+        SMART FEATURES:
+        - Automatically detects plasmids and uses GenBank format (.gb) for them
+        - Uses FASTA format (.fasta) for other sequences  
+        - Saves to current directory by default for easy access
+        - Searches for exact name matches first, then partial matches
         
         This method combines search and download functionality:
         1. Searches for DNA sequences matching the provided name
         2. Finds the best match (exact match preferred, otherwise first result)
-        3. Downloads the sequence in the specified format
-        4. Auto-detects plasmids and chooses appropriate format
+        3. Downloads the sequence in the optimal format (GenBank for plasmids)
+        4. Saves to current directory unless specified otherwise
         
         RECOMMENDED WORKFLOW:
         1. Use this method when you know the sequence name but not the ID
@@ -1254,15 +1275,15 @@ class BenchlingMCP(FastMCP):
             name (str): Name of the DNA sequence to find and download. 
                 Can be partial or full name. Case-insensitive matching.
                 Examples: "CRISPRoff-v2.1", "pUC19", "GFP", "primer"
-            download_dir (str): Directory to save the file. Default: current directory "."
+            download_dir (str): Directory to save the file. Default: "." (current directory)
                 Can be absolute or relative path. Directory will be created if it doesn't exist.
             project_id (Optional[str]): Benchling project ID to search within (format: "src_xxxxxxxxx").
                 If provided, searches only within that project for better specificity.
                 If None, searches across all accessible projects.
-            format (str): Download format. VALID VALUES:
-                - "auto" (default) - Auto-detects: GenBank for plasmids, FASTA for others
-                - "fasta" - FASTA format with header and wrapped sequence
-                - "genbank" - GenBank format with full annotations and features
+            format (str): Download format. OPTIONS:
+                - "auto" (RECOMMENDED): GenBank for plasmids, FASTA for others
+                - "fasta": Force FASTA format (.fasta extension)
+                - "genbank": Force GenBank format (.gb extension)
             
         Returns:
             BenchlingResult: Contains download information with these key fields:
@@ -1270,29 +1291,23 @@ class BenchlingMCP(FastMCP):
                 - sequence_name: Name of the downloaded sequence
                 - file_path: Absolute path to the downloaded file
                 - filename: Name of the created file
-                - format: Format used for download ("fasta" or "genbank")
+                - format: Actual format used ("fasta" or "genbank")
                 - is_plasmid: Boolean indicating if sequence was detected as plasmid
                 - length: Length of sequence in base pairs
                 - download_dir: Directory where file was saved
                 
-        EXAMPLE INPUT/OUTPUT:
-        Input: await download_sequence_by_name(
-            name="CRISPRoff-v2.1",
-            project_id="src_Fq2naN3m"
-        )
+        EXAMPLE - CRISPRoff plasmid automatically downloads as GenBank:
+        Input: await download_sequence_by_name(name="CRISPRoff-v2.1")
         Output: BenchlingResult(
             success=True,
             message="Found and downloaded sequence 'CRISPRoff-v2.1'",
-            count=1,
             data={
-                "sequence_id": "seq_bsw5XEhW",
                 "sequence_name": "CRISPRoff-v2.1",
-                "file_path": "/home/user/project/CRISPRoff-v21.gb",
-                "filename": "CRISPRoff-v21.gb",
-                "format": "genbank",
-                "is_plasmid": True,
-                "length": 11885,
-                "download_dir": "/home/user/project"
+                "file_path": "/current/dir/CRISPRoff-v21.gb",
+                "filename": "CRISPRoff-v21.gb", 
+                "format": "genbank",  # ← Automatically selected!
+                "is_plasmid": True,   # ← Detected as plasmid
+                "length": 11885
             }
         )
         
